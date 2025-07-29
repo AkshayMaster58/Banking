@@ -8,6 +8,6 @@ resource "aws_s3_bucket" "raw_data" {
 }
 
 resource "aws_s3_bucket" "processed_data" {
-  bucket = "banking-processed-data"
+  bucket = "banking-processed-data-akshay"
   force_destroy = true
 }
