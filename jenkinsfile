@@ -10,7 +10,7 @@ pipeline {
   stages {
     stage('Install AWS CLI') {
       steps {
-        sh 'pip install --upgrade awscli'
+        sh 'pip3 install --upgrade awscli'
       }
     }
 
