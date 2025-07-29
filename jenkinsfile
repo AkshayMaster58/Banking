@@ -11,7 +11,7 @@ pipeline {
       steps {
         withCredentials([
           usernamePassword(
-            credentialsId: 'aws-s3-credentials',
+            credentialsId: 'aws-s3-access',
             usernameVariable: 'AWS_ACCESS_KEY_ID',
             passwordVariable: 'AWS_SECRET_ACCESS_KEY'
           )
