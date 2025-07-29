@@ -2,27 +2,42 @@ pipeline {
   agent any
 
   environment {
-    AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
-    AWS_DEFAULT_REGION    = 'us-east-1'
+    AWS_DEFAULT_REGION = 'us-east-1'
   }
 
   stages {
-    stage('Install AWS CLI') {
+    stage('Install AWS CLI and Upload to S3') {
       steps {
-        sh 'pip3 install --upgrade awscli'
-      }
-    }
+        withCredentials([
+          usernamePassword(
+            credentialsId: 'aws-s3-access',
+            usernameVariable: 'AWS_ACCESS_KEY_ID',
+            passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+          )
+        ]) {
+          sh '''
+            echo "🔧 Checking for Python and pip3..."
+            which python3 || sudo apt-get update && sudo apt-get install -y python3
+            which pip3 || sudo apt-get install -y python3-pip
 
-    stage('Upload Raw CSV to S3') {
-      steps {
-        sh 'aws s3 cp data/raw/ s3://rawbuckett1/ --recursive'
-      }
-    }
+            echo "📦 Installing AWS CLI..."
+            pip3 install awscli --user --upgrade
 
-    stage('Upload Processed CSV to S3') {
-      steps {
-        sh 'aws s3 cp data/processed/ s3://finalbuckett3/ --recursive'
+            echo "🔁 Adding ~/.local/bin to PATH"
+            export PATH="$HOME/.local/bin:$PATH"
+
+            echo "🧪 Verifying AWS CLI version:"
+            aws --version
+
+            echo "☁️ Uploading raw data to S3..."
+            aws s3 cp data/raw/ s3://rawbuckett1/ --recursive
+
+            echo "☁️ Uploading processed data to S3..."
+            aws s3 cp data/processed/ s3://finalbuckett3/ --recursive
+
+            echo "✅ Upload complete."
+          '''
+        }
       }
     }
   }
