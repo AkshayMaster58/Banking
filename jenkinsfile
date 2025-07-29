@@ -3,6 +3,7 @@ pipeline {
 
   environment {
     AWS_DEFAULT_REGION = 'us-east-1'
+    PATH = "${HOME}/.local/bin:$PATH"
   }
 
   stages {
@@ -10,24 +11,30 @@ pipeline {
       steps {
         withCredentials([
           usernamePassword(
-            credentialsId: 'aws-s3-access',
+            credentialsId: 'aws-s3-credentials',
             usernameVariable: 'AWS_ACCESS_KEY_ID',
             passwordVariable: 'AWS_SECRET_ACCESS_KEY'
           )
         ]) {
           sh '''
-            echo "🔧 Checking for Python and pip3..."
-            which python3 || sudo apt-get update && sudo apt-get install -y python3
-            which pip3 || sudo apt-get install -y python3-pip
+            echo "🔧 Installing AWS CLI in user space..."
 
-            echo "📦 Installing AWS CLI..."
-            pip3 install awscli --user --upgrade
+            # Try to install pip if missing (in Jenkins AMIs pip3 is usually present)
+            if ! command -v pip3 > /dev/null; then
+              echo "❌ pip3 not found, please install it manually or use a pre-built Jenkins agent with pip3."
+              exit 1
+            fi
 
-            echo "🔁 Adding ~/.local/bin to PATH"
+            # Install awscli if not already available
+            if ! command -v aws > /dev/null; then
+              pip3 install --upgrade --user awscli
+            fi
+
+            echo "🔁 Ensuring AWS CLI is in PATH"
             export PATH="$HOME/.local/bin:$PATH"
 
-            echo "🧪 Verifying AWS CLI version:"
-            aws --version
+            echo "🧪 AWS CLI version:"
+            aws --version || { echo "❌ AWS CLI install failed"; exit 1; }
 
             echo "☁️ Uploading raw data to S3..."
             aws s3 cp data/raw/ s3://rawbuckett1/ --recursive
@@ -35,7 +42,7 @@ pipeline {
             echo "☁️ Uploading processed data to S3..."
             aws s3 cp data/processed/ s3://finalbuckett3/ --recursive
 
-            echo "✅ Upload complete."
+            echo "✅ Upload completed."
           '''
         }
       }
